@@ -1,0 +1,90 @@
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+</head>
+<style type="text/css">
+    table {
+        border-collapse: collapse;
+    }
+
+    table th,
+    table td {
+        padding: 5px 10px;
+        border: 1px solid #000;
+        text-align: center;
+    }
+
+    h1 {
+        text-align:center;
+    }
+
+    .table1 {
+        margin-bottom: 30px;
+        display: inline-block;
+    }
+
+	.table2 {
+		position: absolute;
+		top: 60;
+		left: 150px;
+	}
+
+	.table3 {
+		position: absolute;
+		top: 60;
+		left: 500px;
+	}
+</style>
+<div>
+    <h1>Аналитика по зарплатам и городам для профессии - {{ name }}</h1>
+    <img src="file:///C:/Users/lenovo/PycharmProjects/Pshenichnikov_Artem_git/graph.png" style="width: 900px;">
+    <h1>Статистика по годам</h1>
+    <div style="text-align: center;">
+        <table class="brd table1">
+            <tr>
+                <th>Год</th>
+                <th>Средняя зарплата</th>
+                <th>Средняя зарплата - {{ name }}</th>
+                <th>Количество вакансий</th>
+                <th>Количество вакансий - {{ name }}</th>
+            </tr>
+            {% for i in range(8) %}
+            <tr>
+                <td>{{ year[i] }}</td>
+                <td>{{ slr[i] }}</td>
+                <td>{{ slr_name[i] }}</td>
+                <td>{{ count_vac[i] }}</td>
+                <td>{{ count_vac_name[i] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    <div style="position:relative">
+        <h1>Статистика по городам</h1>
+        <table class="brd table2" style="margin-right: 30px;">
+            <tr>
+                <th>Город</th>
+                <th>Уровень зарплат</th>
+            </tr>
+            {% for i in range(10) %}
+            <tr>
+                <td>{{ city1[i] }}</td>
+                <td>{{ slr_lvl[i] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <table class="brd table3">
+            <tr>
+                <th>Город</th>
+                <th>Доля вакансий</th>
+            </tr>
+            {% for i in range(10) %}
+            <tr>
+                <td>{{ city2[i] }}</td>
+                <td>{{ part_slr[i] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
