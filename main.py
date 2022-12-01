@@ -11,6 +11,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Border, Side
 from jinja2 import FileSystemLoader, Environment
 import pdfkit
+from prettytable import PrettyTable, ALL
 
 currency_to_rub = {
     "AZN": 35.68,
@@ -23,6 +24,28 @@ currency_to_rub = {
     "UAH": 1.64,
     "USD": 60.66,
     "UZS": 0.0055,
+}
+
+all_titles_table = ["№", "Название", "Оклад", "Название региона", "Дата публикации вакансии"]
+
+dict_experince_format = {
+    "noExperience": "Нет опыта",
+    "between1And3": "От 1 года до 3 лет",
+    "between3And6": "От 3 до 6 лет",
+    "moreThan6": "Более 6 лет"
+}
+
+dict_slr_currency = {
+    "AZN": "Манаты",
+    "BYR": "Белорусские рубли",
+    "EUR": "Евро",
+    "GEL": "Грузинский лари",
+    "KGS": "Киргизский сом",
+    "KZT": "Тенге",
+    "RUR": "Рубли",
+    "UAH": "Гривны",
+    "USD": "Доллары",
+    "UZS": "Узбекский сум"
 }
 
 
@@ -95,6 +118,13 @@ class InputConnect:
     def __init__(self):
         self.file_name = 'vacancies_by_year.csv'  # self.processing_file_name(input('Введите название файла: '))
         self.name = 'аналитик'  # input('Введите название профессии: ')
+        self.dict_formatter = {
+            'Название': lambda row: row.name,
+            'Оклад': lambda row: f'{self.slr_format(row.salary.salary_from)} - {self.slr_format(row.salary.salary_to)} ' \
+                                 f'({dict_slr_currency[row.salary.salary_currency]}) ',
+            'Название региона': lambda row: row.area_name,
+            'Дата публикации вакансии': lambda row: '.'.join(reversed(row.published_at[0:10].split('-')))
+        }
 
     @staticmethod
     def processing_file_name(file_name: str) -> str:
@@ -102,6 +132,27 @@ class InputConnect:
             print('Пустой файл')
             exit(0)
         return file_name
+
+    @staticmethod
+    def slr_format(slr: str) -> str:
+        return '{:,}'.format(math.floor(float(slr))).replace(',', ' ')
+
+    def table_print(self, data_vacancies: list):
+        counter = 1
+        table = PrettyTable()
+        table.hrules = ALL
+        table.align = 'l'
+        table.field_names = all_titles_table
+        for title in table.field_names:
+            table.max_width[title] = 20
+        for value in data_vacancies:
+            temp_array = [counter]
+            for v in all_titles_table[1:]:
+                temp = self.dict_formatter[v](value)
+                temp_array.append(temp if len(temp) < 100 else temp[:100] + '...')
+            table.add_row(temp_array)
+            counter += 1
+        print(table.get_string(fields=all_titles_table))
 
 
 class Statistics:
@@ -306,8 +357,9 @@ class Report:
                                               city1=list(statistics.dict_dynamics_slr_cities.keys())[:10],
                                               slr_lvl=list(statistics.dict_dynamics_slr_cities.values())[:10],
                                               city2=list(statistics.dict_dynamics_count_vac_big_cities.keys())[:10],
-                                              part_slr=list(map(lambda x: str(round(x*100, 4))+'%',
-                                                                statistics.dict_dynamics_count_vac_big_cities.values()))[:10])
+                                              part_slr=list(map(lambda x: str(round(x * 100, 4)) + '%',
+                                                                statistics.dict_dynamics_count_vac_big_cities.values()))[
+                                                       :10])
         config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
         pdfkit.from_string(slr_count_vac_sheet,
                            'report.pdf',
@@ -315,11 +367,16 @@ class Report:
                            options={'enable-local-file-access': None})
 
 
+changing_output = input('Вакансии или статистика?')
 input_data = InputConnect()
-dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
-statistics = Statistics(dataset)
-statistics.print_statistics()
-report = Report()
-report.generate_excel(input_data, statistics)
-report.generate_image(input_data, statistics)
-report.generate_pdf(input_data, statistics)
+if changing_output == 'Статистика':
+    dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
+    statistics = Statistics(dataset)
+    statistics.print_statistics()
+    report = Report()
+    report.generate_excel(input_data, statistics)
+    report.generate_image(input_data, statistics)
+    report.generate_pdf(input_data, statistics)
+elif changing_output == 'Вакансии':
+    dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
+    input_data.table_print(dataset.vacancies_objects)
