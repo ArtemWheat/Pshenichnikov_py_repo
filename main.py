@@ -380,3 +380,4 @@ if changing_output == 'Статистика':
 elif changing_output == 'Вакансии':
     dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
     input_data.table_print(dataset.vacancies_objects)
+changing_output = 'main'
