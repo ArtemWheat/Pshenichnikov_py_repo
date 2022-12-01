@@ -377,7 +377,6 @@ if changing_output == 'Статистика':
     report.generate_excel(input_data, statistics)
     report.generate_image(input_data, statistics)
     report.generate_pdf(input_data, statistics)
-    
 elif changing_output == 'Вакансии':
     dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
     input_data.table_print(dataset.vacancies_objects)
