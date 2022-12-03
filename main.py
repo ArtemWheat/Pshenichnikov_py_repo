@@ -12,6 +12,7 @@ from openpyxl.styles import Font, Border, Side
 from jinja2 import FileSystemLoader, Environment
 import pdfkit
 from prettytable import PrettyTable, ALL
+import doctest
 
 currency_to_rub = {
     "AZN": 35.68,
@@ -50,26 +51,66 @@ dict_slr_currency = {
 
 
 class Vacancy:
+    """Класс вакансии
+
+    Attributes:
+        name (str): Имя
+        salary (Salary): Зарплата
+        area_name (str): Регион
+        published_at (str): Дата публикации
+        published_at_year (str): Год публикации
+    """
     def __init__(self, dict_vacancy: dict):
+        """Инициализирует класс вакансии из словаря вакансии
+
+        :param dict_vacancy: Словарь вакансии
+        """
         self.name = dict_vacancy['name']
         self.salary = Salary(salary_from=dict_vacancy['salary_from'],
                              salary_to=dict_vacancy['salary_to'],
                              salary_currency=dict_vacancy['salary_currency'])
         self.area_name = dict_vacancy['area_name']
-        self.published_at = dict_vacancy['published_at']
+        self.published_at = dict_vacancy['published_at'] #TODO можно сразу кастовать к datatime
         self.published_at_year = int(self.published_at[:4])
 
 
 class Salary:
+    """Класс зарплаты
+    Attributes:
+        salary_from (int): Оклад 'от'
+        salary_to (int): Оклад 'до'
+        salary_currency (str): Валюта
+        salary_avg (float): Средняя ЗП
+    """
     def __init__(self, salary_from: str, salary_to: str, salary_currency: str):
-        self.salary_from = salary_from
-        self.salary_to = salary_to
+        """Инициализация класса зарплаты
+
+        :param salary_from: Оклад 'от'
+        :param salary_to: Оклад 'до'
+        :param salary_currency: Валюта
+        """
+        self.salary_from = int(float(salary_from))
+        self.salary_to = int(float(salary_to))
         self.salary_currency = salary_currency
         self.salary_avg = currency_to_rub[salary_currency] * (float(salary_to) + float(salary_from)) / 2
 
 
 class DataSet:
+    """Класс датасета
+
+    Attributes:
+        file_name (str): Имя файла
+        vacancies_objects (list): Список вакансий
+        vacancies_object_name (list): Список вакансий по заданному имени
+    """
     def __init__(self, file_name: str, name: str, start: int, end: int):
+        """Инициализация класса датасета
+
+        :param file_name: Имя файла
+        :param name: Имя искомой профессии
+        :param start: С какого года выводить информацию
+        :param end: По какой год выводить информацию
+        """
         self.file_name = file_name
         self.vacancies_objects = []
         self.vacancies_objects_name = []
@@ -82,6 +123,11 @@ class DataSet:
 
     @staticmethod
     def csv_reader(file_name: str) -> list:
+        """Чтение .csv
+
+        :param file_name: имя файла
+        :return: Вывод списка обработанных данных
+        """
         with open(file_name, encoding='utf-8-sig') as read_file:
             file_reader = csv.reader(read_file, delimiter=",")
             data_vacancies = []
@@ -106,6 +152,13 @@ class DataSet:
 
     @staticmethod
     def csv_filer(html_tags, row: list, titles: list):
+        """Проверка строки вакансии на правильность и отсев 'неправильных'
+
+        :param html_tags: html теги
+        :param row: Строка вакансии
+        :param titles: Заголовки
+        :return:
+        """
         if len(row) < len(titles):
             return
         for i in range(len(row)):
@@ -115,29 +168,52 @@ class DataSet:
 
 
 class InputConnect:
+    """Класс ввода с консоли и вывода таблицы в консоль
+
+    Attributes:
+        file_name (str): Имя файла
+        name (str): Искомое имя
+        __dict_formatter (dict): Словарь функций предобработки вакансий для вывода таблицы
+    """
     def __init__(self):
-        self.file_name = 'vacancies_by_year.csv'  # self.processing_file_name(input('Введите название файла: '))
-        self.name = 'аналитик'  # input('Введите название профессии: ')
-        self.dict_formatter = {
+        """Инициализация класса InputConnect"""
+        self.file_name = self.__processing_file_name(input('Введите название файла: '))
+        self.name = input('Введите название профессии: ')
+        self.__dict_formatter = {
             'Название': lambda row: row.name,
-            'Оклад': lambda row: f'{self.slr_format(row.salary.salary_from)} - {self.slr_format(row.salary.salary_to)} ' \
+            'Оклад': lambda row: f'{self.__slr_format(row.salary.salary_from)} - {self.__slr_format(row.salary.salary_to)} ' \
                                  f'({dict_slr_currency[row.salary.salary_currency]}) ',
             'Название региона': lambda row: row.area_name,
             'Дата публикации вакансии': lambda row: '.'.join(reversed(row.published_at[0:10].split('-')))
         }
 
     @staticmethod
-    def processing_file_name(file_name: str) -> str:
+    def __processing_file_name(file_name: str) -> str:
+        """Обработка ввода имени файла
+
+        :param file_name: Имя файла
+        :return: Имя файла
+        """
         if os.stat(file_name).st_size == 0:
             print('Пустой файл')
             exit(0)
         return file_name
 
     @staticmethod
-    def slr_format(slr: str) -> str:
+    def __slr_format(slr: str) -> str:
+        """Форматирование ЗП для данных таблицы
+
+        :param slr: Зарплата 'от' или 'до'
+        :return: Преобразованная ЗП
+        """
         return '{:,}'.format(math.floor(float(slr))).replace(',', ' ')
 
     def table_print(self, data_vacancies: list):
+        """Вывод в консоль таблицы
+
+        :param data_vacancies: Список вакансий
+        :return:
+        """
         counter = 1
         table = PrettyTable()
         table.hrules = ALL
@@ -148,7 +224,7 @@ class InputConnect:
         for value in data_vacancies:
             temp_array = [counter]
             for v in all_titles_table[1:]:
-                temp = self.dict_formatter[v](value)
+                temp = self.__dict_formatter[v](value)
                 temp_array.append(temp if len(temp) < 100 else temp[:100] + '...')
             table.add_row(temp_array)
             counter += 1
@@ -156,20 +232,41 @@ class InputConnect:
 
 
 class Statistics:
+    """Класс статистики
+
+    Attributes:
+        dict_dynamics_slr (dict): Словарь динамики уровня зарплат по годам для всех вакансий
+        dict_dynamics_count_vac (dict): Словарь динамики количества вакансий по годам для всех вакансий
+        dict_dynamics_slr_name (dict): Словарь динамики уровня зарплат по годам для искомых вакансий
+        dict_dynamics_count_vac_name (dict): Словарь динамики количества вакансий по годам для искомых вакансий
+        __list_years (list): Список лет
+        dict_dynamics_count_vac_all_cities (dict): Словарь количества вакансий по всем городам
+        dict_dynamics_count_vac_big_cities (dict): Словарь количества вакансий по 'большим' городам
+        dict_dynamics_slr_cities (dict): Словарь уровня зарплат по 'большим' городам
+    """
     def __init__(self, dataset: DataSet):
-        self.dict_dynamics_slr = self.dynamics_salary(dataset.vacancies_objects)
-        self.dict_dynamics_count_vac = self.dynamics_count_vac(dataset.vacancies_objects)
+        """Инициадизация класса Statistics
+
+        :param dataset: Объект класса DataSet
+        """
+        self.dict_dynamics_slr = self.__dynamics_salary(dataset.vacancies_objects)
+        self.dict_dynamics_count_vac = self.__dynamics_count_vac(dataset.vacancies_objects)
         self.__list_years = list(self.dict_dynamics_slr)
-        self.dict_dynamics_slr_name = self.dynamics_salary(dataset.vacancies_objects_name)
-        self.dict_dynamics_count_vac_name = self.dynamics_count_vac(dataset.vacancies_objects_name)
-        self.dict_dynamics_count_vac_all_cities = self.dynamics_count_vac_big_cities(dataset.vacancies_objects)
+        self.dict_dynamics_slr_name = self.__dynamics_salary(dataset.vacancies_objects_name)
+        self.dict_dynamics_count_vac_name = self.__dynamics_count_vac(dataset.vacancies_objects_name)
+        self.dict_dynamics_count_vac_all_cities = self.__dynamics_count_vac_cities(dataset.vacancies_objects)
         self.dict_dynamics_count_vac_big_cities = dict(filter(lambda x: x[0] != 'Другие',
                                                               list(self.dict_dynamics_count_vac_all_cities.items())))
-        self.dict_dynamics_slr_cities = self.dynamics_slr_big_cities(data_vacancies=dataset.vacancies_objects,
-                                                                     big_cities=list(
+        self.dict_dynamics_slr_cities = self.__dynamics_slr_big_cities(data_vacancies=dataset.vacancies_objects,
+                                                                       big_cities=list(
                                                                          self.dict_dynamics_count_vac_big_cities))
 
-    def dynamics_salary(self, data_vacancies: list) -> dict:
+    def __dynamics_salary(self, data_vacancies: list) -> dict:
+        """Составление словаря динамики уровня зарплат по годам для всех вакансий
+
+        :param data_vacancies: Список вакансий
+        :return: Словарь динамики уровня зарплат по годам для всех вакансий
+        """
         if len(data_vacancies) == 0:
             return {x: 0 for x in self.__list_years}
         dict_dynamic_slr = {}
@@ -182,25 +279,23 @@ class Statistics:
             dict_dynamic_slr[key] = math.floor(sum(value) / len(value))
         return dict_dynamic_slr
 
-    def dynamics_count_vac(self, data_vacancies: list) -> dict:
+    def __dynamics_count_vac(self, data_vacancies: list) -> dict:
+        """Составление словаря динамики количества вакансий по годам для всех вакансий
+
+        :param data_vacancies: Список вакансий
+        :return: Словарь динамики количества вакансий по годам для всех вакансий
+        """
         if len(data_vacancies) == 0:
             return {x: 0 for x in self.__list_years}
         dict_dynamic_count_vac = dict(Counter(map(lambda x: x.published_at_year, data_vacancies)))
         return dict_dynamic_count_vac
 
-    @staticmethod
-    def dynamics_slr_big_cities(data_vacancies: list, big_cities: list) -> dict:
-        dict_dynamic_slr_cities = {}
-        for vac in data_vacancies:
-            if vac.area_name not in dict_dynamic_slr_cities.keys() and vac.area_name in big_cities:
-                dict_dynamic_slr_cities[vac.area_name] = [vac.salary.salary_avg]
-            elif vac.area_name in big_cities:
-                dict_dynamic_slr_cities[vac.area_name].append(vac.salary.salary_avg)
-        for key, value in dict_dynamic_slr_cities.items():
-            dict_dynamic_slr_cities[key] = math.floor(sum(value) / len(value))
-        return dict(sorted(dict_dynamic_slr_cities.items(), key=lambda x: x[1], reverse=True))
+    def __dynamics_count_vac_cities(self, data_vacancies: list) -> dict:
+        """Составление словаря количества вакансий по городам
 
-    def dynamics_count_vac_big_cities(self, data_vacancies: list) -> dict:
+        :param data_vacancies: Список вакансий
+        :return: Словарь количества вакансий по городам
+        """
         dict_dynamic_count_vac_cities = dict(Counter(map(lambda x: x.area_name, data_vacancies)))
         dict_dynamic_count_vac_big_cities = {}
         count_vac_small_cities = 0
@@ -212,7 +307,29 @@ class Statistics:
         dict_dynamic_count_vac_big_cities['Другие'] = count_vac_small_cities
         return dict(sorted(dict_dynamic_count_vac_big_cities.items(), key=lambda x: x[1], reverse=True))
 
+    @staticmethod
+    def __dynamics_slr_big_cities(data_vacancies: list, big_cities: list) -> dict:
+        """Составление словаря уровня зарплат по 'большим' городам
+
+        :param data_vacancies: Список вакансий
+        :param big_cities: Список 'больших' городов
+        :return: Словарь уровня зарплат по 'большим' городам
+        """
+        dict_dynamic_slr_cities = {}
+        for vac in data_vacancies:
+            if vac.area_name not in dict_dynamic_slr_cities.keys() and vac.area_name in big_cities:
+                dict_dynamic_slr_cities[vac.area_name] = [vac.salary.salary_avg]
+            elif vac.area_name in big_cities:
+                dict_dynamic_slr_cities[vac.area_name].append(vac.salary.salary_avg)
+        for key, value in dict_dynamic_slr_cities.items():
+            dict_dynamic_slr_cities[key] = math.floor(sum(value) / len(value))
+        return dict(sorted(dict_dynamic_slr_cities.items(), key=lambda x: x[1], reverse=True))
+
     def print_statistics(self):
+        """Метод печати статистики в консоль
+
+        :return:
+        """
         print('Динамика уровня зарплат по годам: ' + str(self.dict_dynamics_slr))
         print('Динамика количества вакансий по годам: ' + str(self.dict_dynamics_count_vac))
         print('Динамика уровня зарплат по годам для выбранной профессии: ' + str(self.dict_dynamics_slr_name))
@@ -225,7 +342,14 @@ class Statistics:
 
 
 class Report:
-    def generate_excel(self, input_data: InputConnect, statistics: Statistics):
+    """Библиотека генерации файлов отчёта в виде .pdf .png .xlsx"""
+    def generate_excel(self, name_find_vac: str, statistics: Statistics):
+        """Генерация XLSX файла отчёта
+
+        :param name_find_vac: Имя запрашиваемой вакансии
+        :param statistics: Класс статистики для генерации таблицы в .xlsx
+        :return:
+        """
         wb = Workbook()
         ws1 = wb.create_sheet("Статистика по годам")
         ws2 = wb.create_sheet("Статистика по городам")
@@ -238,9 +362,9 @@ class Report:
 
         ws1.cell(1, 1, 'Год').font = ft
         ws1.cell(1, 2, 'Средняя зарплата').font = ft
-        ws1.cell(1, 3, f'Средняя зарплата - {input_data.name}').font = ft
+        ws1.cell(1, 3, f'Средняя зарплата - {name_find_vac}').font = ft
         ws1.cell(1, 4, 'Количество вакансий').font = ft
-        ws1.cell(1, 5, f'Количество вакансий - {input_data.name}').font = ft
+        ws1.cell(1, 5, f'Количество вакансий - {name_find_vac}').font = ft
         for index in range(5):
             ws1.cell(1, index + 1).border = thin_border
 
@@ -267,6 +391,16 @@ class Report:
         wb.save('report.xlsx')
 
     def __add_cell(self, ws, data: dict, y: int, key: bool, border: Border, limit: int):
+        """Добавдение ячейки
+
+        :param ws: WorkSheet
+        :param data: Целевой словарь
+        :param y: Координата смещения
+        :param key: Ключ вывода ключей True если надо вывести ключи словаря, False если значения
+        :param border: Обводка
+        :param limit: Ограничение
+        :return:
+        """
         if key:
             for index, year in enumerate(data.keys()):
                 if index + 1 != limit:
@@ -287,13 +421,24 @@ class Report:
                     break
 
     def __auto_width(self, ws):
+        """Функция автоматического выставления границ столбцов
+
+        :param ws: WorkSheet
+        :return:
+        """
         for column_cells in ws.columns:
             new_column_length = max(len(str(cell.value)) for cell in column_cells)
             new_column_letter = (get_column_letter(column_cells[0].column))
             if new_column_length > 0:
                 ws.column_dimensions[new_column_letter].width = new_column_length * 1.23
 
-    def generate_image(self, input_data: InputConnect, statistics: Statistics):
+    def generate_image(self, name_find_vac: str, statistics: Statistics):
+        """Функция генерации графиков отчета в .png
+
+        :param name_find_vac: Имя запрашиваемой вакансии
+        :param statistics: Класс статистики для генерации графиков
+        :return:
+        """
         fig = plt.figure(figsize=(10, 6))
         plt.rcParams['font.size'] = '8'
         width = 0.4
@@ -306,7 +451,7 @@ class Report:
         ax.bar(years + width / 2,
                statistics.dict_dynamics_slr_name.values(),
                width,
-               label=f'з/п {input_data.name}')
+               label=f'з/п {name_find_vac}')
         ax.set_title('Уровень зарплат по годам')
         ax.set_xticks(years)
         ax.set_xticklabels(statistics.dict_dynamics_slr.keys())
@@ -320,7 +465,7 @@ class Report:
         bx.bar(years + width / 2,
                statistics.dict_dynamics_count_vac_name.values(),
                width,
-               label=f'Количество вакансий\n{input_data.name}')
+               label=f'Количество вакансий\n{name_find_vac}')
         bx.set_title('Количество вакансий по годам')
         bx.set_xticks(years)
         bx.set_xticklabels(statistics.dict_dynamics_slr.keys())
@@ -344,11 +489,17 @@ class Report:
         dx.axis("equal")
         fig.savefig('graph.png')
 
-    def generate_pdf(self, input_data: InputConnect, statistics: Statistics):
+    def generate_pdf(self, name_find_vac: str, statistics: Statistics):
+        """Функция генерации отчета в виде .pdf совмещающего и графики, и таблицы
+
+        :param name_find_vac: Имя запрашиваемой вакансии
+        :param statistics: Класс статистики для генерации графиков и таблиц
+        :return:
+        """
         loader = FileSystemLoader('./temp.html')
         env = Environment(loader=loader)
         template = env.get_template('')
-        slr_count_vac_sheet = template.render(name=input_data.name,
+        slr_count_vac_sheet = template.render(name=name_find_vac,
                                               year=list(statistics.dict_dynamics_slr),
                                               slr=list(statistics.dict_dynamics_slr.values()),
                                               slr_name=list(statistics.dict_dynamics_slr_name.values()),
@@ -368,16 +519,16 @@ class Report:
 
 
 if __name__ == '__main__':
-    changing_output = input('Вакансии или статистика?: ')
     input_data = InputConnect()
-    if changing_output == 'Статистика':
+    changing_output = int(input('Таблица в консоль или отчет по статистике? (1 или 2): '))
+    if changing_output == 2:
         dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
         statistics = Statistics(dataset)
         statistics.print_statistics()
         report = Report()
-        report.generate_excel(input_data, statistics)
-        report.generate_image(input_data, statistics)
-        report.generate_pdf(input_data, statistics)
-    elif changing_output == 'Вакансии':
+        report.generate_excel(input_data.name, statistics)
+        report.generate_image(input_data.name, statistics)
+        report.generate_pdf(input_data.name, statistics)
+    elif changing_output == 1:
         dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
-        input_data.table_print(dataset.vacancies_objects)
+        input_data.table_print(dataset.vacancies_objects_name)
