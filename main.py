@@ -367,16 +367,17 @@ class Report:
                            options={'enable-local-file-access': None})
 
 
-changing_output = input('Вакансии или статистика?')
-input_data = InputConnect()
-if changing_output == 'Статистика':
-    dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
-    statistics = Statistics(dataset)
-    statistics.print_statistics()
-    report = Report()
-    report.generate_excel(input_data, statistics)
-    report.generate_image(input_data, statistics)
-    report.generate_pdf(input_data, statistics)
-elif changing_output == 'Вакансии':
-    dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
-    input_data.table_print(dataset.vacancies_objects)
+if __name__ == '__main__':
+    changing_output = input('Вакансии или статистика?: ')
+    input_data = InputConnect()
+    if changing_output == 'Статистика':
+        dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
+        statistics = Statistics(dataset)
+        statistics.print_statistics()
+        report = Report()
+        report.generate_excel(input_data, statistics)
+        report.generate_image(input_data, statistics)
+        report.generate_pdf(input_data, statistics)
+    elif changing_output == 'Вакансии':
+        dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
+        input_data.table_print(dataset.vacancies_objects)
