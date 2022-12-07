@@ -82,7 +82,7 @@ class Salary:
         salary_currency (str): Валюта
         salary_avg_to_rub (float): Средняя ЗП
     """
-    def __init__(self, salary_from: str, salary_to: str, salary_currency: str):
+    def __init__(self, salary_from, salary_to, salary_currency: str):
         """Инициализация класса зарплаты
 
         :param salary_from: Оклад 'от'
