@@ -80,7 +80,7 @@ class Salary:
         salary_from (int): Оклад 'от'
         salary_to (int): Оклад 'до'
         salary_currency (str): Валюта
-        salary_avg (float): Средняя ЗП
+        salary_avg_to_rub (float): Средняя ЗП
     """
     def __init__(self, salary_from: str, salary_to: str, salary_currency: str):
         """Инициализация класса зарплаты
@@ -92,7 +92,13 @@ class Salary:
         self.salary_from = int(float(salary_from))
         self.salary_to = int(float(salary_to))
         self.salary_currency = salary_currency
-        self.salary_avg = currency_to_rub[salary_currency] * (float(salary_to) + float(salary_from)) / 2
+
+    def get_salary_to_rub(self) -> float:
+        """Функция подсчета средней ЗП в рублях с помощью словаря currency_to_rub
+
+        :return: Вывод средней ЗП в рублях
+        """
+        return currency_to_rub[self.salary_currency] * (float(self.salary_to) + float(self.salary_from)) / 2
 
 
 class DataSet:
@@ -272,9 +278,9 @@ class Statistics:
         dict_dynamic_slr = {}
         for vac in data_vacancies:
             if vac.published_at_year not in dict_dynamic_slr.keys():
-                dict_dynamic_slr[vac.published_at_year] = [vac.salary.salary_avg]
+                dict_dynamic_slr[vac.published_at_year] = [vac.salary.salary_avg_to_rub]
             else:
-                dict_dynamic_slr[vac.published_at_year].append(vac.salary.salary_avg)
+                dict_dynamic_slr[vac.published_at_year].append(vac.salary.salary_avg_to_rub)
         for key, value in dict_dynamic_slr.items():
             dict_dynamic_slr[key] = math.floor(sum(value) / len(value))
         return dict_dynamic_slr
@@ -318,9 +324,9 @@ class Statistics:
         dict_dynamic_slr_cities = {}
         for vac in data_vacancies:
             if vac.area_name not in dict_dynamic_slr_cities.keys() and vac.area_name in big_cities:
-                dict_dynamic_slr_cities[vac.area_name] = [vac.salary.salary_avg]
+                dict_dynamic_slr_cities[vac.area_name] = [vac.salary.salary_avg_to_rub]
             elif vac.area_name in big_cities:
-                dict_dynamic_slr_cities[vac.area_name].append(vac.salary.salary_avg)
+                dict_dynamic_slr_cities[vac.area_name].append(vac.salary.salary_avg_to_rub)
         for key, value in dict_dynamic_slr_cities.items():
             dict_dynamic_slr_cities[key] = math.floor(sum(value) / len(value))
         return dict(sorted(dict_dynamic_slr_cities.items(), key=lambda x: x[1], reverse=True))
