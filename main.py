@@ -15,6 +15,7 @@ from prettytable import PrettyTable, ALL
 import cProfile, pstats, io
 from pstats import SortKey
 from dateutil import parser
+from datetime import datetime
 
 currency_to_rub = {
     "AZN": 35.68,
@@ -75,8 +76,8 @@ class Vacancy:
         self.area_name = dict_vacancy['area_name']
         self.published_at = dict_vacancy['published_at']
 
-        """parser.parse(dict_vacancy['published_at'])
-        '.'.join(str(datetime.datetime.strptime(dict_vacancy['published_at'], '%Y-%m-%dT%H:%M:%S%z').date()).split('-'))"""
+        #str(parser.parse(dict_vacancy['published_at']).date())
+        #'.'.join(str(datetime.datetime.strptime(dict_vacancy['published_at'], '%Y-%m-%dT%H:%M:%S%z').date()).split('-'))
 
         self.published_at_year = int(self.published_at[:4])
 
@@ -562,6 +563,8 @@ class Report:
 
 
 if __name__ == '__main__':
+    pr = cProfile.Profile()
+    pr.enable()
     input_data = InputConnect()
     changing_output = int(input('Таблица в консоль или отчет по статистике? (1 или 2): '))
     if changing_output == 2:
@@ -575,3 +578,9 @@ if __name__ == '__main__':
     elif changing_output == 1:
         dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
         input_data.table_print(dataset.vacancies_objects_name)
+    pr.disable()
+    s = io.StringIO()
+    sortby = SortKey.CUMULATIVE
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print(s.getvalue())

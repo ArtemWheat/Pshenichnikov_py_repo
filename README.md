@@ -1,2 +1,5 @@
-![img.png](img.png)
-![img_1.png](img_1.png)
+![img.png](readme_images/img.png)
+![img_1.png](readme_images/img_1.png)
+![](readme_images/without_datetime.png)
+![](readme_images/datetime.png)
+![](readme_images/date_parser.png)
