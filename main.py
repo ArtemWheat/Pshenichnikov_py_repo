@@ -80,7 +80,6 @@ class Salary:
         salary_from (int): Оклад 'от'
         salary_to (int): Оклад 'до'
         salary_currency (str): Валюта
-        salary_avg_to_rub (float): Средняя ЗП
     """
     def __init__(self, salary_from, salary_to, salary_currency: str):
         """Инициализация класса зарплаты
@@ -278,9 +277,9 @@ class Statistics:
         dict_dynamic_slr = {}
         for vac in data_vacancies:
             if vac.published_at_year not in dict_dynamic_slr.keys():
-                dict_dynamic_slr[vac.published_at_year] = [vac.salary.salary_avg_to_rub]
+                dict_dynamic_slr[vac.published_at_year] = [vac.salary.get_salary_to_rub()]
             else:
-                dict_dynamic_slr[vac.published_at_year].append(vac.salary.salary_avg_to_rub)
+                dict_dynamic_slr[vac.published_at_year].append(vac.salary.get_salary_to_rub())
         for key, value in dict_dynamic_slr.items():
             dict_dynamic_slr[key] = math.floor(sum(value) / len(value))
         return dict_dynamic_slr
@@ -324,9 +323,9 @@ class Statistics:
         dict_dynamic_slr_cities = {}
         for vac in data_vacancies:
             if vac.area_name not in dict_dynamic_slr_cities.keys() and vac.area_name in big_cities:
-                dict_dynamic_slr_cities[vac.area_name] = [vac.salary.salary_avg_to_rub]
+                dict_dynamic_slr_cities[vac.area_name] = [vac.salary.get_salary_to_rub()]
             elif vac.area_name in big_cities:
-                dict_dynamic_slr_cities[vac.area_name].append(vac.salary.salary_avg_to_rub)
+                dict_dynamic_slr_cities[vac.area_name].append(vac.salary.get_salary_to_rub())
         for key, value in dict_dynamic_slr_cities.items():
             dict_dynamic_slr_cities[key] = math.floor(sum(value) / len(value))
         return dict(sorted(dict_dynamic_slr_cities.items(), key=lambda x: x[1], reverse=True))
