@@ -12,7 +12,9 @@ from openpyxl.styles import Font, Border, Side
 from jinja2 import FileSystemLoader, Environment
 import pdfkit
 from prettytable import PrettyTable, ALL
-import doctest
+import cProfile, pstats, io
+from pstats import SortKey
+from dateutil import parser
 
 currency_to_rub = {
     "AZN": 35.68,
@@ -71,7 +73,11 @@ class Vacancy:
                              salary_to=dict_vacancy['salary_to'],
                              salary_currency=dict_vacancy['salary_currency'])
         self.area_name = dict_vacancy['area_name']
-        self.published_at = dict_vacancy['published_at']  # TODO можно сразу кастовать к datatime
+        self.published_at = dict_vacancy['published_at']
+
+        """parser.parse(dict_vacancy['published_at'])
+        '.'.join(str(datetime.datetime.strptime(dict_vacancy['published_at'], '%Y-%m-%dT%H:%M:%S%z').date()).split('-'))"""
+
         self.published_at_year = int(self.published_at[:4])
 
 
@@ -556,7 +562,6 @@ class Report:
 
 
 if __name__ == '__main__':
-    #doctest.testmod()
     input_data = InputConnect()
     changing_output = int(input('Таблица в консоль или отчет по статистике? (1 или 2): '))
     if changing_output == 2:
