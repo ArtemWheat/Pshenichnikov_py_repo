@@ -1,6 +1,7 @@
-from unittest import TestCase
+import io
+from unittest import TestCase, mock
 from main import Statistics, DataSet, InputConnect
-from unittest.mock import patch
+from unittest.mock import patch, call
 
 
 class StatisticsTests(TestCase):

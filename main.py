@@ -60,6 +60,7 @@ class Vacancy:
         published_at (str): Дата публикации
         published_at_year (str): Год публикации
     """
+
     def __init__(self, dict_vacancy: dict):
         """Инициализирует класс вакансии из словаря вакансии
 
@@ -70,7 +71,7 @@ class Vacancy:
                              salary_to=dict_vacancy['salary_to'],
                              salary_currency=dict_vacancy['salary_currency'])
         self.area_name = dict_vacancy['area_name']
-        self.published_at = dict_vacancy['published_at'] #TODO можно сразу кастовать к datatime
+        self.published_at = dict_vacancy['published_at']  # TODO можно сразу кастовать к datatime
         self.published_at_year = int(self.published_at[:4])
 
 
@@ -81,21 +82,41 @@ class Salary:
         salary_to (int): Оклад 'до'
         salary_currency (str): Валюта
     """
+
     def __init__(self, salary_from, salary_to, salary_currency: str):
         """Инициализация класса зарплаты
 
-        :param salary_from: Оклад 'от'
-        :param salary_to: Оклад 'до'
+        :param salary_from(int, float, str): Оклад 'от'
+        :param salary_to(int, float, str): Оклад 'до'
         :param salary_currency: Валюта
+        >>> type(Salary(10, 20, 'RUR')).__name__
+        'Salary'
+        >>> Salary(10.0, 20.0, 'RUR').salary_from
+        10
+        >>> Salary(10.0, 20.0, 'RUR').salary_to
+        20
+        >>> Salary(10.0, 20.0, 'RUR').salary_currency
+        'RUR'
         """
         self.salary_from = int(float(salary_from))
         self.salary_to = int(float(salary_to))
+        if salary_currency not in currency_to_rub.keys():
+            raise ValueError('Неверно введна валюта')
         self.salary_currency = salary_currency
 
     def get_salary_to_rub(self) -> float:
         """Функция подсчета средней ЗП в рублях с помощью словаря currency_to_rub
-
         :return: Вывод средней ЗП в рублях
+        >>> Salary(20.0, 30.0, 'RUR').get_salary_to_rub()
+        25.0
+        >>> Salary(20.0, 30.0, 'RUR').salary_from
+        20
+        >>> Salary(20.0, 30.0, 'RUR').salary_to
+        30
+        >>> Salary(20.0, 30.0, 'EUR').get_salary_to_rub()
+        1497.5
+        >>> Salary(20, 30.0, 'RUR').get_salary_to_rub()
+        25.0
         """
         return currency_to_rub[self.salary_currency] * (float(self.salary_to) + float(self.salary_from)) / 2
 
@@ -108,6 +129,7 @@ class DataSet:
         vacancies_objects (list): Список вакансий
         vacancies_object_name (list): Список вакансий по заданному имени
     """
+
     def __init__(self, file_name: str, name: str, start: int, end: int):
         """Инициализация класса датасета
 
@@ -115,11 +137,17 @@ class DataSet:
         :param name: Имя искомой профессии
         :param start: С какого года выводить информацию
         :param end: По какой год выводить информацию
+        >>> DataSet('Tests/test_data_set.csv', 'аналитик', 2007, 2014).file_name
+        'Tests/test_data_set.csv'
+        >>> DataSet('Tests/test_data_set.csv', 'администратор', 2007, 2014).vacancies_objects[0].name
+        'Менеджер по работе с юридическими лицами'
+        >>> DataSet('Tests/test_data_set.csv', 'администратор', 2007, 2014).vacancies_objects_name[0].name
+        'Системный администратор'
         """
         self.file_name = file_name
         self.vacancies_objects = []
         self.vacancies_objects_name = []
-        for vacancy in self.csv_reader(file_name):
+        for vacancy in self.__csv_reader(file_name):
             if not start <= int(vacancy['published_at'][:4]) <= end:
                 continue
             self.vacancies_objects.append(Vacancy(vacancy))
@@ -127,7 +155,7 @@ class DataSet:
                 self.vacancies_objects_name.append(Vacancy(vacancy))
 
     @staticmethod
-    def csv_reader(file_name: str) -> list:
+    def __csv_reader(file_name: str) -> list:
         """Чтение .csv
 
         :param file_name: имя файла
@@ -145,9 +173,9 @@ class DataSet:
             for row in file_reader:
                 if '' in row or len(row) != len(titles):
                     continue
-                DataSet.csv_filer(html_tags=html_tags,
-                                  row=row,
-                                  titles=titles)
+                DataSet.__csv_filer(html_tags=html_tags,
+                                    row=row,
+                                    titles=titles)
                 if len(row) == len(titles):
                     data_vacancies.append({titles[i]: row[i] for i in range(len(titles))})
             if len(data_vacancies) == 0:
@@ -156,7 +184,7 @@ class DataSet:
             return data_vacancies
 
     @staticmethod
-    def csv_filer(html_tags, row: list, titles: list):
+    def __csv_filer(html_tags, row: list, titles: list):
         """Проверка строки вакансии на правильность и отсев 'неправильных'
 
         :param html_tags: html теги
@@ -180,14 +208,16 @@ class InputConnect:
         name (str): Искомое имя
         __dict_formatter (dict): Словарь функций предобработки вакансий для вывода таблицы
     """
+
     def __init__(self):
         """Инициализация класса InputConnect"""
         self.file_name = self.__processing_file_name(input('Введите название файла: '))
         self.name = input('Введите название профессии: ')
         self.__dict_formatter = {
             'Название': lambda row: row.name,
-            'Оклад': lambda row: f'{self.__slr_format(row.salary.salary_from)} - {self.__slr_format(row.salary.salary_to)} ' \
-                                 f'({dict_slr_currency[row.salary.salary_currency]}) ',
+            'Оклад': lambda
+                row: f'{self.__slr_format(row.salary.salary_from)} - {self.__slr_format(row.salary.salary_to)} ' \
+                     f'({dict_slr_currency[row.salary.salary_currency]}) ',
             'Название региона': lambda row: row.area_name,
             'Дата публикации вакансии': lambda row: '.'.join(reversed(row.published_at[0:10].split('-')))
         }
@@ -249,6 +279,7 @@ class Statistics:
         dict_dynamics_count_vac_big_cities (dict): Словарь количества вакансий по 'большим' городам
         dict_dynamics_slr_cities (dict): Словарь уровня зарплат по 'большим' городам
     """
+
     def __init__(self, dataset: DataSet):
         """Инициадизация класса Statistics
 
@@ -264,7 +295,7 @@ class Statistics:
                                                               list(self.dict_dynamics_count_vac_all_cities.items())))
         self.dict_dynamics_slr_cities = self.__dynamics_slr_big_cities(data_vacancies=dataset.vacancies_objects,
                                                                        big_cities=list(
-                                                                         self.dict_dynamics_count_vac_big_cities))
+                                                                           self.dict_dynamics_count_vac_big_cities))
 
     def __dynamics_salary(self, data_vacancies: list) -> dict:
         """Составление словаря динамики уровня зарплат по годам для всех вакансий
@@ -348,6 +379,7 @@ class Statistics:
 
 class Report:
     """Библиотека генерации файлов отчёта в виде .pdf .png .xlsx"""
+
     def generate_excel(self, name_find_vac: str, statistics: Statistics):
         """Генерация XLSX файла отчёта
 
@@ -524,6 +556,7 @@ class Report:
 
 
 if __name__ == '__main__':
+    #doctest.testmod()
     input_data = InputConnect()
     changing_output = int(input('Таблица в консоль или отчет по статистике? (1 или 2): '))
     if changing_output == 2:
