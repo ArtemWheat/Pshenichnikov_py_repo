@@ -76,8 +76,8 @@ class Vacancy:
         self.area_name = dict_vacancy['area_name']
         self.published_at = dict_vacancy['published_at']
 
-        #str(parser.parse(dict_vacancy['published_at']).date())
-        #'.'.join(str(datetime.datetime.strptime(dict_vacancy['published_at'], '%Y-%m-%dT%H:%M:%S%z').date()).split('-'))
+        # str(parser.parse(dict_vacancy['published_at']).date())
+        # '.'.join(str(datetime.datetime.strptime(dict_vacancy['published_at'], '%Y-%m-%dT%H:%M:%S%z').date()).split('-'))
 
         self.published_at_year = int(self.published_at[:4])
 
@@ -128,6 +128,44 @@ class Salary:
         return currency_to_rub[self.salary_currency] * (float(self.salary_to) + float(self.salary_from)) / 2
 
 
+class Divider:
+    def __init__(self, file_name: str):
+        self.file_name = file_name
+
+    def split(self, delimiter=',', output_name_template='output_%s.csv', output_path='.'):
+        with open(self.file_name, encoding='utf-8-sig') as read_file:
+            file_reader = csv.reader(read_file, delimiter=",")
+            try:
+                titles = next(file_reader)
+            except StopIteration:
+                print('Пустой файл')
+                exit(0)
+            current_piece = 1
+            current_out_path = os.path.join(
+                output_path,
+                output_name_template % current_piece
+            )
+            current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'), delimiter=delimiter)
+            current_year = 0
+            for i, row in enumerate(file_reader):
+                if i == 0:
+                    current_year = row[titles.index('published_at')][2:4]
+                    current_out_writer.writerow(titles)
+                    current_out_writer.writerow(row)
+                elif row[titles.index('published_at')][2:4] != current_year:
+                    current_piece += 1
+                    current_out_path = os.path.join(
+                        output_path,
+                        output_name_template % current_piece
+                    )
+                    current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'), delimiter=delimiter)
+                    current_year = row[titles.index('published_at')][2:4]
+                    current_out_writer.writerow(titles)
+                    current_out_writer.writerow(row)
+                else:
+                    current_out_writer.writerow(row)
+
+
 class DataSet:
     """Класс датасета
 
@@ -154,21 +192,20 @@ class DataSet:
         self.file_name = file_name
         self.vacancies_objects = []
         self.vacancies_objects_name = []
-        for vacancy in self.__csv_reader(file_name):
+        for vacancy in self.__csv_reader():
             if not start <= int(vacancy['published_at'][:4]) <= end:
                 continue
             self.vacancies_objects.append(Vacancy(vacancy))
             if name in vacancy['name']:
                 self.vacancies_objects_name.append(Vacancy(vacancy))
 
-    @staticmethod
-    def __csv_reader(file_name: str) -> list:
+    def __csv_reader(self) -> list:
         """Чтение .csv
 
         :param file_name: имя файла
         :return: Вывод списка обработанных данных
         """
-        with open(file_name, encoding='utf-8-sig') as read_file:
+        with open(self.file_name, encoding='utf-8-sig') as read_file:
             file_reader = csv.reader(read_file, delimiter=",")
             data_vacancies = []
             try:
@@ -180,9 +217,9 @@ class DataSet:
             for row in file_reader:
                 if '' in row or len(row) != len(titles):
                     continue
-                DataSet.__csv_filer(html_tags=html_tags,
-                                    row=row,
-                                    titles=titles)
+                self.__csv_filer(html_tags=html_tags,
+                                 row=row,
+                                 titles=titles)
                 if len(row) == len(titles):
                     data_vacancies.append({titles[i]: row[i] for i in range(len(titles))})
             if len(data_vacancies) == 0:
@@ -563,6 +600,8 @@ class Report:
 
 
 if __name__ == '__main__':
+    '''divider = Divider('vacancies_by_year.csv')
+    divider.split(output_path='Csv_files_by_year')'''
     pr = cProfile.Profile()
     pr.enable()
     input_data = InputConnect()
