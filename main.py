@@ -631,8 +631,8 @@ class Report:
 
 
 if __name__ == '__main__':
-    # pr = cProfile.Profile()
-    # pr.enable()
+    pr = cProfile.Profile()
+    pr.enable()
     input_data = InputConnect()
     changing_output = int(input('Таблица в консоль или отчет по статистике? (1 или 2): '))
     if changing_output == 2:
@@ -649,9 +649,9 @@ if __name__ == '__main__':
     elif changing_output == 1:
         dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
         input_data.table_print(dataset.vacancies_objects_name)
-    # pr.disable()
-    # s = io.StringIO()
-    # sortby = SortKey.CUMULATIVE
-    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    # ps.print_stats()
-    # print(s.getvalue())
+    pr.disable()
+    s = io.StringIO()
+    sortby = SortKey.CUMULATIVE
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print(s.getvalue())
