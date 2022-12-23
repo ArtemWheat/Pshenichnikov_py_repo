@@ -278,26 +278,19 @@ class InputConnect:
             except StopIteration:
                 print('Пустой файл')
                 exit(0)
-            current_piece = 1
-            current_out_path = os.path.join(
-                output_path,
-                self.file_name % current_piece
-            )
+
+            first_row = next(file_reader)
+            current_year = first_row[titles.index('published_at')][2:4]
+            current_out_path = output_path + '/' + current_year + '.csv'
+
             current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'), delimiter=delimiter)
-            current_year = 0
-            for i, row in enumerate(file_reader):
-                if i == 0:
+            current_out_writer.writerow(titles)
+            current_out_writer.writerow(first_row)
+            for row in file_reader:
+                if row[titles.index('published_at')][2:4] != current_year:
                     current_year = row[titles.index('published_at')][2:4]
-                    current_out_writer.writerow(titles)
-                    current_out_writer.writerow(row)
-                elif row[titles.index('published_at')][2:4] != current_year:
-                    current_piece += 1
-                    current_out_path = os.path.join(
-                        output_path,
-                        self.file_name % current_piece
-                    )
+                    current_out_path = output_path + '/' + current_year + '.csv'
                     current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'), delimiter=delimiter)
-                    current_year = row[titles.index('published_at')][2:4]
                     current_out_writer.writerow(titles)
                     current_out_writer.writerow(row)
                 else:
@@ -597,6 +590,7 @@ if __name__ == '__main__':
     #pr = cProfile.Profile()
     #pr.enable()
     input_data = InputConnect()
+    input_data.split()
     changing_output = int(input('Таблица в консоль или отчет по статистике? (1 или 2): '))
     if changing_output == 2:
         dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
@@ -607,7 +601,6 @@ if __name__ == '__main__':
         report.generate_image(input_data.name, statistics)
         report.generate_pdf(input_data.name, statistics)
     elif changing_output == 1:
-        input_data.split()
         dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
         input_data.table_print(dataset.vacancies_objects_name)
     #pr.disable()
