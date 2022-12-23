@@ -128,44 +128,6 @@ class Salary:
         return currency_to_rub[self.salary_currency] * (float(self.salary_to) + float(self.salary_from)) / 2
 
 
-class Divider:
-    def __init__(self, file_name: str):
-        self.file_name = file_name
-
-    def split(self, delimiter=',', output_name_template='output_%s.csv', output_path='.'):
-        with open(self.file_name, encoding='utf-8-sig') as read_file:
-            file_reader = csv.reader(read_file, delimiter=",")
-            try:
-                titles = next(file_reader)
-            except StopIteration:
-                print('Пустой файл')
-                exit(0)
-            current_piece = 1
-            current_out_path = os.path.join(
-                output_path,
-                output_name_template % current_piece
-            )
-            current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'), delimiter=delimiter)
-            current_year = 0
-            for i, row in enumerate(file_reader):
-                if i == 0:
-                    current_year = row[titles.index('published_at')][2:4]
-                    current_out_writer.writerow(titles)
-                    current_out_writer.writerow(row)
-                elif row[titles.index('published_at')][2:4] != current_year:
-                    current_piece += 1
-                    current_out_path = os.path.join(
-                        output_path,
-                        output_name_template % current_piece
-                    )
-                    current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'), delimiter=delimiter)
-                    current_year = row[titles.index('published_at')][2:4]
-                    current_out_writer.writerow(titles)
-                    current_out_writer.writerow(row)
-                else:
-                    current_out_writer.writerow(row)
-
-
 class DataSet:
     """Класс датасета
 
@@ -202,7 +164,6 @@ class DataSet:
     def __csv_reader(self) -> list:
         """Чтение .csv
 
-        :param file_name: имя файла
         :return: Вывод списка обработанных данных
         """
         with open(self.file_name, encoding='utf-8-sig') as read_file:
@@ -308,6 +269,39 @@ class InputConnect:
             table.add_row(temp_array)
             counter += 1
         print(table.get_string(fields=all_titles_table))
+
+    def split(self, delimiter=',', output_path='csv_files_by_year'):
+        with open(self.file_name, encoding='utf-8-sig') as read_file:
+            file_reader = csv.reader(read_file, delimiter=",")
+            try:
+                titles = next(file_reader)
+            except StopIteration:
+                print('Пустой файл')
+                exit(0)
+            current_piece = 1
+            current_out_path = os.path.join(
+                output_path,
+                self.file_name % current_piece
+            )
+            current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'), delimiter=delimiter)
+            current_year = 0
+            for i, row in enumerate(file_reader):
+                if i == 0:
+                    current_year = row[titles.index('published_at')][2:4]
+                    current_out_writer.writerow(titles)
+                    current_out_writer.writerow(row)
+                elif row[titles.index('published_at')][2:4] != current_year:
+                    current_piece += 1
+                    current_out_path = os.path.join(
+                        output_path,
+                        self.file_name % current_piece
+                    )
+                    current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'), delimiter=delimiter)
+                    current_year = row[titles.index('published_at')][2:4]
+                    current_out_writer.writerow(titles)
+                    current_out_writer.writerow(row)
+                else:
+                    current_out_writer.writerow(row)
 
 
 class Statistics:
@@ -600,10 +594,8 @@ class Report:
 
 
 if __name__ == '__main__':
-    '''divider = Divider('vacancies_by_year.csv')
-    divider.split(output_path='Csv_files_by_year')'''
-    pr = cProfile.Profile()
-    pr.enable()
+    #pr = cProfile.Profile()
+    #pr.enable()
     input_data = InputConnect()
     changing_output = int(input('Таблица в консоль или отчет по статистике? (1 или 2): '))
     if changing_output == 2:
@@ -615,11 +607,12 @@ if __name__ == '__main__':
         report.generate_image(input_data.name, statistics)
         report.generate_pdf(input_data.name, statistics)
     elif changing_output == 1:
+        input_data.split()
         dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
         input_data.table_print(dataset.vacancies_objects_name)
-    pr.disable()
-    s = io.StringIO()
-    sortby = SortKey.CUMULATIVE
-    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    ps.print_stats()
-    print(s.getvalue())
+    #pr.disable()
+    #s = io.StringIO()
+    #sortby = SortKey.CUMULATIVE
+    #ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    #ps.print_stats()
+    #print(s.getvalue())
