@@ -12,6 +12,7 @@ from openpyxl.styles import Font, Border, Side
 from jinja2 import FileSystemLoader, Environment
 import pdfkit
 from prettytable import PrettyTable, ALL
+from multiprocessing import Manager, Pool
 import cProfile, pstats, io
 from pstats import SortKey
 from dateutil import parser
@@ -272,7 +273,7 @@ class InputConnect:
 
     def split(self, delimiter=',', output_path='csv_files_by_year'):
         with open(self.file_name, encoding='utf-8-sig') as read_file:
-            file_reader = csv.reader(read_file, delimiter=",")
+            file_reader = csv.reader(read_file, delimiter=delimiter)
             try:
                 titles = next(file_reader)
             except StopIteration:
@@ -282,51 +283,65 @@ class InputConnect:
             first_row = next(file_reader)
             current_year = first_row[titles.index('published_at')][2:4]
             current_out_path = output_path + '/' + current_year + '.csv'
-
-            current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'), delimiter=delimiter)
+            file_names = [current_out_path]
+            current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'),
+                                            delimiter=delimiter,
+                                            lineterminator="\r")
             current_out_writer.writerow(titles)
             current_out_writer.writerow(first_row)
             for row in file_reader:
                 if row[titles.index('published_at')][2:4] != current_year:
                     current_year = row[titles.index('published_at')][2:4]
                     current_out_path = output_path + '/' + current_year + '.csv'
-                    current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'), delimiter=delimiter)
+                    file_names.append(current_out_path)
+                    current_out_writer = csv.writer(open(current_out_path, 'w', encoding='utf-8-sig'),
+                                                    delimiter=delimiter,
+                                                    lineterminator="\r")
                     current_out_writer.writerow(titles)
                     current_out_writer.writerow(row)
                 else:
                     current_out_writer.writerow(row)
+            return file_names
 
 
-class Statistics:
-    """Класс статистики
+class StatisticsByYear:
+    def __init__(self, name: str, splitted_file_names: list):
+        self.name = name
+        self.list_dict_dynamics_slr = Manager().list()
+        self.list_dict_dynamics_count_vac = Manager().list()
+        self.list_dict_dynamics_slr_name = Manager().list()
+        self.list_dict_dynamics_count_vac_name = Manager().list()
 
-    Attributes:
-        dict_dynamics_slr (dict): Словарь динамики уровня зарплат по годам для всех вакансий
-        dict_dynamics_count_vac (dict): Словарь динамики количества вакансий по годам для всех вакансий
-        dict_dynamics_slr_name (dict): Словарь динамики уровня зарплат по годам для искомых вакансий
-        dict_dynamics_count_vac_name (dict): Словарь динамики количества вакансий по годам для искомых вакансий
-        __list_years (list): Список лет
-        dict_dynamics_count_vac_all_cities (dict): Словарь количества вакансий по всем городам
-        dict_dynamics_count_vac_big_cities (dict): Словарь количества вакансий по 'большим' городам
-        dict_dynamics_slr_cities (dict): Словарь уровня зарплат по 'большим' городам
-    """
+        pool = Pool(processes=6, initargs=(self.list_dict_dynamics_slr,
+                                           self.list_dict_dynamics_count_vac,
+                                           self.list_dict_dynamics_slr_name,
+                                           self.list_dict_dynamics_count_vac_name))
+        pool.map_async(self.stat, splitted_file_names)
+        pool.close()
+        pool.join()
+        self.list_dict_dynamics_slr = list(filter(None, self.list_dict_dynamics_slr))
+        self.list_dict_dynamics_count_vac = list(filter(None, self.list_dict_dynamics_count_vac))
+        self.list_dict_dynamics_slr_name = list(filter(None, self.list_dict_dynamics_slr_name))
+        self.list_dict_dynamics_count_vac_name = list(filter(None, self.list_dict_dynamics_count_vac_name))
 
-    def __init__(self, dataset: DataSet):
-        """Инициадизация класса Statistics
+        self.dict_dynamics_slr = self.__get_dict_from_list(self.list_dict_dynamics_slr)
+        self.dict_dynamics_count_vac = self.__get_dict_from_list(self.list_dict_dynamics_count_vac)
+        self.dict_dynamics_slr_name = self.__get_dict_from_list(self.list_dict_dynamics_slr_name)
+        self.dict_dynamics_count_vac_name = self.__get_dict_from_list(self.list_dict_dynamics_count_vac_name)
 
-        :param dataset: Объект класса DataSet
-        """
-        self.dict_dynamics_slr = self.__dynamics_salary(dataset.vacancies_objects)
-        self.dict_dynamics_count_vac = self.__dynamics_count_vac(dataset.vacancies_objects)
-        self.__list_years = list(self.dict_dynamics_slr)
-        self.dict_dynamics_slr_name = self.__dynamics_salary(dataset.vacancies_objects_name)
-        self.dict_dynamics_count_vac_name = self.__dynamics_count_vac(dataset.vacancies_objects_name)
-        self.dict_dynamics_count_vac_all_cities = self.__dynamics_count_vac_cities(dataset.vacancies_objects)
-        self.dict_dynamics_count_vac_big_cities = dict(filter(lambda x: x[0] != 'Другие',
-                                                              list(self.dict_dynamics_count_vac_all_cities.items())))
-        self.dict_dynamics_slr_cities = self.__dynamics_slr_big_cities(data_vacancies=dataset.vacancies_objects,
-                                                                       big_cities=list(
-                                                                           self.dict_dynamics_count_vac_big_cities))
+    @staticmethod
+    def __get_dict_from_list(list_dicts: list) -> dict:
+        result = {}
+        for x in list_dicts:
+            result.update(x)
+        return result
+
+    def stat(self, file_name):
+        dataset = DataSet(file_name, self.name, 2007, 2014)
+        self.list_dict_dynamics_slr.append(self.__dynamics_salary(dataset.vacancies_objects))
+        self.list_dict_dynamics_count_vac.append(self.__dynamics_count_vac(dataset.vacancies_objects))
+        self.list_dict_dynamics_slr_name.append(self.__dynamics_salary(dataset.vacancies_objects_name))
+        self.list_dict_dynamics_count_vac_name.append(self.__dynamics_count_vac(dataset.vacancies_objects_name))
 
     def __dynamics_salary(self, data_vacancies: list) -> dict:
         """Составление словаря динамики уровня зарплат по годам для всех вакансий
@@ -334,8 +349,8 @@ class Statistics:
         :param data_vacancies: Список вакансий
         :return: Словарь динамики уровня зарплат по годам для всех вакансий
         """
-        if len(data_vacancies) == 0:
-            return {x: 0 for x in self.__list_years}
+        # if len(data_vacancies) == 0:
+        #    return {x: 0 for x in self.__list_years}
         dict_dynamic_slr = {}
         for vac in data_vacancies:
             if vac.published_at_year not in dict_dynamic_slr.keys():
@@ -352,10 +367,44 @@ class Statistics:
         :param data_vacancies: Список вакансий
         :return: Словарь динамики количества вакансий по годам для всех вакансий
         """
-        if len(data_vacancies) == 0:
-            return {x: 0 for x in self.__list_years}
+        # if len(data_vacancies) == 0:
+        #    return {x: 0 for x in self.__list_years}
         dict_dynamic_count_vac = dict(Counter(map(lambda x: x.published_at_year, data_vacancies)))
         return dict_dynamic_count_vac
+
+    def print_statistics(self):
+        """Метод печати статистики в консоль
+
+        :return:
+        """
+        print('Динамика уровня зарплат по годам: ' + str(self.dict_dynamics_slr))
+        print('Динамика количества вакансий по годам: ' + str(self.dict_dynamics_count_vac))
+        print('Динамика уровня зарплат по годам для выбранной профессии: ' + str(self.dict_dynamics_slr_name))
+        print(
+            'Динамика количества вакансий по годам для выбранной профессии: ' + str(self.dict_dynamics_count_vac_name))
+
+
+class StatisticsByCities:
+    """Класс статистики
+
+    Attributes:
+        dict_dynamics_count_vac_all_cities (dict): Словарь количества вакансий по всем городам
+        dict_dynamics_count_vac_big_cities (dict): Словарь количества вакансий по 'большим' городам
+        dict_dynamics_slr_cities (dict): Словарь уровня зарплат по 'большим' городам
+    """
+
+    def __init__(self, file_name: str, name: str):
+        """Инициадизация класса Statistics
+
+        :param dataset: Объект класса DataSet
+        """
+        dataset = DataSet(file_name, name, 2007, 2014)
+        self.dict_dynamics_count_vac_all_cities = self.__dynamics_count_vac_cities(dataset.vacancies_objects)
+        self.dict_dynamics_count_vac_big_cities = dict(filter(lambda x: x[0] != 'Другие',
+                                                              list(self.dict_dynamics_count_vac_all_cities.items())))
+        self.dict_dynamics_slr_cities = self.__dynamics_slr_big_cities(data_vacancies=dataset.vacancies_objects,
+                                                                       big_cities=list(
+                                                                           self.dict_dynamics_count_vac_big_cities))
 
     def __dynamics_count_vac_cities(self, data_vacancies: list) -> dict:
         """Составление словаря количества вакансий по городам
@@ -397,11 +446,6 @@ class Statistics:
 
         :return:
         """
-        print('Динамика уровня зарплат по годам: ' + str(self.dict_dynamics_slr))
-        print('Динамика количества вакансий по годам: ' + str(self.dict_dynamics_count_vac))
-        print('Динамика уровня зарплат по годам для выбранной профессии: ' + str(self.dict_dynamics_slr_name))
-        print(
-            'Динамика количества вакансий по годам для выбранной профессии: ' + str(self.dict_dynamics_count_vac_name))
         print('Уровень зарплат по городам (в порядке убывания): ' +
               str(dict(islice(self.dict_dynamics_slr_cities.items(), 10))))
         print('Доля вакансий по городам (в порядке убывания): ' +
@@ -411,11 +455,11 @@ class Statistics:
 class Report:
     """Библиотека генерации файлов отчёта в виде .pdf .png .xlsx"""
 
-    def generate_excel(self, name_find_vac: str, statistics: Statistics):
+    def generate_excel(self, name_find_vac: str, stat_by_year: StatisticsByYear, stat_by_cities: StatisticsByCities):
         """Генерация XLSX файла отчёта
 
         :param name_find_vac: Имя запрашиваемой вакансии
-        :param statistics: Класс статистики для генерации таблицы в .xlsx
+        :param stat_by_cities: Класс статистики для генерации таблицы в .xlsx
         :return:
         """
         wb = Workbook()
@@ -436,11 +480,11 @@ class Report:
         for index in range(5):
             ws1.cell(1, index + 1).border = thin_border
 
-        self.__add_cell(ws1, statistics.dict_dynamics_slr, 1, True, thin_border, 0)
-        self.__add_cell(ws1, statistics.dict_dynamics_slr, 2, False, thin_border, 0)
-        self.__add_cell(ws1, statistics.dict_dynamics_slr_name, 3, False, thin_border, 0)
-        self.__add_cell(ws1, statistics.dict_dynamics_count_vac, 4, False, thin_border, 0)
-        self.__add_cell(ws1, statistics.dict_dynamics_count_vac_name, 5, False, thin_border, 0)
+        self.__add_cell(ws1, stat_by_year.dict_dynamics_slr, 1, True, thin_border, 0)
+        self.__add_cell(ws1, stat_by_year.dict_dynamics_slr, 2, False, thin_border, 0)
+        self.__add_cell(ws1, stat_by_year.dict_dynamics_slr_name, 3, False, thin_border, 0)
+        self.__add_cell(ws1, stat_by_year.dict_dynamics_count_vac, 4, False, thin_border, 0)
+        self.__add_cell(ws1, stat_by_year.dict_dynamics_count_vac_name, 5, False, thin_border, 0)
 
         ws2.cell(1, 1, 'Город').font = ft
         ws2.cell(1, 2, 'Уровень зарплат').font = ft
@@ -449,10 +493,10 @@ class Report:
         for index in range(5):
             ws2.cell(1, index + 1 if index == (2 or 3) else index + 2).border = thin_border
 
-        self.__add_cell(ws2, statistics.dict_dynamics_slr_cities, 1, True, thin_border, 10)
-        self.__add_cell(ws2, statistics.dict_dynamics_slr_cities, 2, False, thin_border, 10)
-        self.__add_cell(ws2, statistics.dict_dynamics_count_vac_big_cities, 4, True, thin_border, 10)
-        self.__add_cell(ws2, statistics.dict_dynamics_count_vac_big_cities, 5, False, thin_border, 10)
+        self.__add_cell(ws2, stat_by_cities.dict_dynamics_slr_cities, 1, True, thin_border, 10)
+        self.__add_cell(ws2, stat_by_cities.dict_dynamics_slr_cities, 2, False, thin_border, 10)
+        self.__add_cell(ws2, stat_by_cities.dict_dynamics_count_vac_big_cities, 4, True, thin_border, 10)
+        self.__add_cell(ws2, stat_by_cities.dict_dynamics_count_vac_big_cities, 5, False, thin_border, 10)
 
         self.__auto_width(ws1)
         self.__auto_width(ws2)
@@ -500,47 +544,47 @@ class Report:
             if new_column_length > 0:
                 ws.column_dimensions[new_column_letter].width = new_column_length * 1.23
 
-    def generate_image(self, name_find_vac: str, statistics: Statistics):
+    def generate_image(self, name_find_vac: str, stat_by_year: StatisticsByYear, stat_by_cities: StatisticsByCities):
         """Функция генерации графиков отчета в .png
 
         :param name_find_vac: Имя запрашиваемой вакансии
-        :param statistics: Класс статистики для генерации графиков
+        :param stat_by_cities: Класс статистики для генерации графиков
         :return:
         """
         fig = plt.figure(figsize=(10, 6))
         plt.rcParams['font.size'] = '8'
         width = 0.4
-        years = np.arange(len(statistics.dict_dynamics_slr.keys()))
+        years = np.arange(len(stat_by_year.dict_dynamics_slr.keys()))
         ax = fig.add_subplot(221)
         ax.bar(years - width / 2,
-               statistics.dict_dynamics_slr.values(),
+               stat_by_year.dict_dynamics_slr.values(),
                width,
                label='средняя з/п')
         ax.bar(years + width / 2,
-               statistics.dict_dynamics_slr_name.values(),
+               stat_by_year.dict_dynamics_slr_name.values(),
                width,
                label=f'з/п {name_find_vac}')
         ax.set_title('Уровень зарплат по годам')
         ax.set_xticks(years)
-        ax.set_xticklabels(statistics.dict_dynamics_slr.keys())
+        ax.set_xticklabels(stat_by_year.dict_dynamics_slr.keys())
         ax.legend()
 
         bx = fig.add_subplot(222)
         bx.bar(years - width / 2,
-               statistics.dict_dynamics_count_vac.values(),
+               stat_by_year.dict_dynamics_count_vac.values(),
                width,
                label='Количество вакансий')
         bx.bar(years + width / 2,
-               statistics.dict_dynamics_count_vac_name.values(),
+               stat_by_year.dict_dynamics_count_vac_name.values(),
                width,
                label=f'Количество вакансий\n{name_find_vac}')
         bx.set_title('Количество вакансий по годам')
         bx.set_xticks(years)
-        bx.set_xticklabels(statistics.dict_dynamics_slr.keys())
+        bx.set_xticklabels(stat_by_year.dict_dynamics_slr.keys())
         bx.legend()
         bx.grid(axis='y')
 
-        dynamics_slr_cities_rev = dict(reversed(list(statistics.dict_dynamics_slr_cities.items())[:10]))
+        dynamics_slr_cities_rev = dict(reversed(list(stat_by_cities.dict_dynamics_slr_cities.items())[:10]))
         cities_slr = np.arange(len(dynamics_slr_cities_rev.keys()))
         cx = fig.add_subplot(223)
         cx.barh(cities_slr - width / 2, dynamics_slr_cities_rev.values(), width + 0.2)
@@ -550,34 +594,34 @@ class Report:
         cx.grid(axis='x')
 
         dx = fig.add_subplot(224)
-        dynamics_count_vac_cit_rev = dict(reversed(list(statistics.dict_dynamics_count_vac_all_cities.items())))
+        dynamics_count_vac_cit_rev = dict(reversed(list(stat_by_cities.dict_dynamics_count_vac_all_cities.items())))
         dx.pie(dynamics_count_vac_cit_rev.values(),
                labels=dynamics_count_vac_cit_rev.keys())
         dx.set_title('Доля вакансий по городам')
         dx.axis("equal")
         fig.savefig('graph.png')
 
-    def generate_pdf(self, name_find_vac: str, statistics: Statistics):
+    def generate_pdf(self, name_find_vac: str, stat_by_year: StatisticsByYear, stat_by_cities: StatisticsByCities):
         """Функция генерации отчета в виде .pdf совмещающего и графики, и таблицы
 
         :param name_find_vac: Имя запрашиваемой вакансии
-        :param statistics: Класс статистики для генерации графиков и таблиц
+        :param stat_by_cities: Класс статистики для генерации графиков и таблиц
         :return:
         """
         loader = FileSystemLoader('./temp.html')
         env = Environment(loader=loader)
         template = env.get_template('')
         slr_count_vac_sheet = template.render(name=name_find_vac,
-                                              year=list(statistics.dict_dynamics_slr),
-                                              slr=list(statistics.dict_dynamics_slr.values()),
-                                              slr_name=list(statistics.dict_dynamics_slr_name.values()),
-                                              count_vac=list(statistics.dict_dynamics_count_vac.values()),
-                                              count_vac_name=list(statistics.dict_dynamics_count_vac_name.values()),
-                                              city1=list(statistics.dict_dynamics_slr_cities.keys())[:10],
-                                              slr_lvl=list(statistics.dict_dynamics_slr_cities.values())[:10],
-                                              city2=list(statistics.dict_dynamics_count_vac_big_cities.keys())[:10],
+                                              year=list(stat_by_year.dict_dynamics_slr),
+                                              slr=list(stat_by_year.dict_dynamics_slr.values()),
+                                              slr_name=list(stat_by_year.dict_dynamics_slr_name.values()),
+                                              count_vac=list(stat_by_year.dict_dynamics_count_vac.values()),
+                                              count_vac_name=list(stat_by_year.dict_dynamics_count_vac_name.values()),
+                                              city1=list(stat_by_cities.dict_dynamics_slr_cities.keys())[:10],
+                                              slr_lvl=list(stat_by_cities.dict_dynamics_slr_cities.values())[:10],
+                                              city2=list(stat_by_cities.dict_dynamics_count_vac_big_cities.keys())[:10],
                                               part_slr=list(map(lambda x: str(round(x * 100, 4)) + '%',
-                                                                statistics.dict_dynamics_count_vac_big_cities.values()))[
+                                                                stat_by_cities.dict_dynamics_count_vac_big_cities.values()))[
                                                        :10])
         config = pdfkit.configuration(wkhtmltopdf=r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe')
         pdfkit.from_string(slr_count_vac_sheet,
@@ -587,25 +631,27 @@ class Report:
 
 
 if __name__ == '__main__':
-    #pr = cProfile.Profile()
-    #pr.enable()
+    # pr = cProfile.Profile()
+    # pr.enable()
     input_data = InputConnect()
-    input_data.split()
     changing_output = int(input('Таблица в консоль или отчет по статистике? (1 или 2): '))
     if changing_output == 2:
         dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
-        statistics = Statistics(dataset)
-        statistics.print_statistics()
+        splitted_file_names = input_data.split()
+        statistics_by_year = StatisticsByYear(input_data.name, splitted_file_names)
+        statistics_by_cities = StatisticsByCities(input_data.file_name, input_data.name)
+        statistics_by_cities.print_statistics()
+        statistics_by_year.print_statistics()
         report = Report()
-        report.generate_excel(input_data.name, statistics)
-        report.generate_image(input_data.name, statistics)
-        report.generate_pdf(input_data.name, statistics)
+        report.generate_excel(input_data.name, statistics_by_year, statistics_by_cities)
+        report.generate_image(input_data.name, statistics_by_year, statistics_by_cities)
+        report.generate_pdf(input_data.name, statistics_by_year, statistics_by_cities)
     elif changing_output == 1:
         dataset = DataSet(input_data.file_name, input_data.name, 2007, 2014)
         input_data.table_print(dataset.vacancies_objects_name)
-    #pr.disable()
-    #s = io.StringIO()
-    #sortby = SortKey.CUMULATIVE
-    #ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    #ps.print_stats()
-    #print(s.getvalue())
+    # pr.disable()
+    # s = io.StringIO()
+    # sortby = SortKey.CUMULATIVE
+    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    # ps.print_stats()
+    # print(s.getvalue())

@@ -1,6 +1,6 @@
 import io
 from unittest import TestCase, mock
-from main import Statistics, DataSet, InputConnect
+from main import StatisticsByCities, DataSet, InputConnect
 from unittest.mock import patch, call
 
 
@@ -8,39 +8,39 @@ class StatisticsTests(TestCase):
     @patch('builtins.input', side_effect=['test_slr.csv', 'аналитик'])
     def test_dict_slr(self, mock_input):
         input_data = InputConnect()
-        self.assertEqual(Statistics(DataSet(input_data.file_name, input_data.name, 2007, 2007)).dict_dynamics_slr,
+        self.assertEqual(StatisticsByCities(DataSet(input_data.file_name, input_data.name, 2007, 2007)).dict_dynamics_slr,
                          {2007: 44285})
 
     @patch('builtins.input', side_effect=['test_slr.csv', 'аналитик'])
     def test_dict_slr_name1(self, mock_input):
         input_data = InputConnect()
-        self.assertEqual(Statistics(DataSet(input_data.file_name, input_data.name, 2007, 2007)).dict_dynamics_slr_name,
+        self.assertEqual(StatisticsByCities(DataSet(input_data.file_name, input_data.name, 2007, 2007)).dict_dynamics_slr_name,
                          {2007: 62500})
 
     @patch('builtins.input', side_effect=['test_slr.csv', 'программист'])
     def test_dict_slr_name2(self, mock_input):
         input_data = InputConnect()
-        self.assertEqual(Statistics(DataSet(input_data.file_name, input_data.name, 2007, 2007)).dict_dynamics_slr_name,
+        self.assertEqual(StatisticsByCities(DataSet(input_data.file_name, input_data.name, 2007, 2007)).dict_dynamics_slr_name,
                          {2007: 40000})
 
     @patch('builtins.input', side_effect=['test_count_vac.csv', 'аналитик'])
     def test_dict_count_vac(self, mock_input):
         input_data = InputConnect()
-        self.assertEqual(Statistics(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_count_vac,
+        self.assertEqual(StatisticsByCities(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_count_vac,
                          {2007: 7,
                           2008: 3})
 
     @patch('builtins.input', side_effect=['test_count_vac.csv', 'аналитик'])
     def test_dict_count_vac_name1(self, mock_input):
         input_data = InputConnect()
-        self.assertEqual(Statistics(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_count_vac_name,
+        self.assertEqual(StatisticsByCities(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_count_vac_name,
                          {2007: 2})
 
     @patch('builtins.input', side_effect=['test_count_vac.csv', 'программист'])
     def test_dict_count_vac_name2(self, mock_input):
         input_data = InputConnect()
         self.assertEqual(
-            Statistics(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_count_vac_name,
+            StatisticsByCities(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_count_vac_name,
             {2007: 2,
              2008: 1})
 
@@ -48,7 +48,7 @@ class StatisticsTests(TestCase):
     def test_dict_cities(self, mock_input):
         input_data = InputConnect()
         self.assertEqual(
-            Statistics(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_slr_cities,
+            StatisticsByCities(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_slr_cities,
             {'Варгаши': 31000,
              'Екатеринбург': 22500,
              'Курган': 35000,
@@ -63,7 +63,7 @@ class StatisticsTests(TestCase):
     def test_dict_all_cities_count_vac(self, mock_input):
         input_data = InputConnect()
         self.assertEqual(
-            Statistics(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_count_vac_all_cities,
+            StatisticsByCities(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_count_vac_all_cities,
             {'Варгаши': 0.0769,
              'Другие': 0,
              'Екатеринбург': 0.0769,
@@ -79,7 +79,7 @@ class StatisticsTests(TestCase):
     def test_dict_big_cities_count_vac(self, mock_input):
         input_data = InputConnect()
         self.assertEqual(
-            Statistics(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_count_vac_all_cities,
+            StatisticsByCities(DataSet(input_data.file_name, input_data.name, 2007, 2008)).dict_dynamics_count_vac_all_cities,
             {'Другие': 0.0376,
              'Екатеринбург': 0.0189,
              'Казань': 0.0189,
