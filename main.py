@@ -306,38 +306,57 @@ class InputConnect:
 
 
 class StatisticsByYear:
+    """Класс статистики по годам на основании csv чанков
+
+    Attributes:
+        name (str): Словарь количества вакансий по всем городам
+        dict_dynamics_slr (dict): Словарь динамики уровня зарплат по годам для всех вакансий
+        dict_dynamics_count_vac (dict): Словарь динамики количества вакансий по годам для всех вакансий
+        dict_dynamics_slr_name (dict): Словарь динамики уровня зарплат по годам для искомых вакансий
+        dict_dynamics_count_vac_name (dict): Словарь динамики количества вакансий по годам для искомых вакансий
+    """
     def __init__(self, name: str, splitted_file_names: list):
+        """инициализация класса StatisticsByYear
+
+        :param name: название профессии
+        :param splitted_file_names: список чанков csv
+        """
         self.name = name
-        self.list_dict_dynamics_slr = []
-        self.list_dict_dynamics_count_vac = []
-        self.list_dict_dynamics_slr_name = []
-        self.list_dict_dynamics_count_vac_name = []
+        list_dict_dynamics_slr = []
+        list_dict_dynamics_count_vac = []
+        list_dict_dynamics_slr_name = []
+        list_dict_dynamics_count_vac_name = []
 
         pool = ProcessPoolExecutor(max_workers=6)
         for el in pool.map(self.stat, splitted_file_names):
-            self.list_dict_dynamics_slr.append(el[0])
-            self.list_dict_dynamics_count_vac.append(el[1])
-            self.list_dict_dynamics_slr_name.append(el[2])
-            self.list_dict_dynamics_count_vac_name.append(el[3])
+            list_dict_dynamics_slr.append(el[0])
+            list_dict_dynamics_count_vac.append(el[1])
+            list_dict_dynamics_slr_name.append(el[2])
+            list_dict_dynamics_count_vac_name.append(el[3])
 
-        self.list_dict_dynamics_slr = list(filter(None, self.list_dict_dynamics_slr))
-        self.list_dict_dynamics_count_vac = list(filter(None, self.list_dict_dynamics_count_vac))
-        self.list_dict_dynamics_slr_name = list(filter(None, self.list_dict_dynamics_slr_name))
-        self.list_dict_dynamics_count_vac_name = list(filter(None, self.list_dict_dynamics_count_vac_name))
-
-        self.dict_dynamics_slr = self.__get_dict_from_list(self.list_dict_dynamics_slr)
-        self.dict_dynamics_count_vac = self.__get_dict_from_list(self.list_dict_dynamics_count_vac)
-        self.dict_dynamics_slr_name = self.__get_dict_from_list(self.list_dict_dynamics_slr_name)
-        self.dict_dynamics_count_vac_name = self.__get_dict_from_list(self.list_dict_dynamics_count_vac_name)
+        self.dict_dynamics_slr = self.__get_dict_from_list(list(filter(None, list_dict_dynamics_slr)))
+        self.dict_dynamics_count_vac = self.__get_dict_from_list(list(filter(None, list_dict_dynamics_count_vac)))
+        self.dict_dynamics_slr_name = self.__get_dict_from_list(list(filter(None, list_dict_dynamics_slr_name)))
+        self.dict_dynamics_count_vac_name = self.__get_dict_from_list(list(filter(None, list_dict_dynamics_count_vac_name)))
 
     @staticmethod
     def __get_dict_from_list(list_dicts: list) -> dict:
+        """преобразование списка словарей в словарь
+
+        :param list_dicts:
+        :return: словарь
+        """
         result = {}
         for x in list_dicts:
             result.update(x)
         return result
 
     def stat(self, file_name):
+        """вывод статистики по годам
+
+        :param file_name: имя файла
+        :return: кортеж словарей со статистикой
+        """
         dataset = DataSet(file_name, self.name, 2007, 2014)
         return self.__dynamics_salary(dataset.vacancies_objects), \
                self.__dynamics_count_vac(dataset.vacancies_objects), \
@@ -386,7 +405,7 @@ class StatisticsByYear:
 
 
 class StatisticsByCities:
-    """Класс статистики
+    """Класс статистики по городам
 
     Attributes:
         dict_dynamics_count_vac_all_cities (dict): Словарь количества вакансий по всем городам
@@ -395,9 +414,10 @@ class StatisticsByCities:
     """
 
     def __init__(self, file_name: str, name: str):
-        """Инициадизация класса Statistics
+        """Инициадизация класса StatisticsByCities
 
-        :param dataset: Объект класса DataSet
+        :param file_name: имя файла
+        :param name: название профессии
         """
         dataset = DataSet(file_name, name, 2007, 2014)
         self.dict_dynamics_count_vac_all_cities = self.__dynamics_count_vac_cities(dataset.vacancies_objects)
@@ -443,7 +463,7 @@ class StatisticsByCities:
         return dict(sorted(dict_dynamic_slr_cities.items(), key=lambda x: x[1], reverse=True))
 
     def print_statistics(self):
-        """Метод печати статистики в консоль
+        """Метод печати статистики по городам в консоль
 
         :return:
         """
