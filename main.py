@@ -307,18 +307,20 @@ class InputConnect:
 class StatisticsByYear:
     def __init__(self, name: str, splitted_file_names: list):
         self.name = name
-        self.list_dict_dynamics_slr = Manager().list()
-        self.list_dict_dynamics_count_vac = Manager().list()
-        self.list_dict_dynamics_slr_name = Manager().list()
-        self.list_dict_dynamics_count_vac_name = Manager().list()
+        self.list_dict_dynamics_slr = []
+        self.list_dict_dynamics_count_vac = []
+        self.list_dict_dynamics_slr_name = []
+        self.list_dict_dynamics_count_vac_name = []
 
-        pool = Pool(processes=6, initargs=(self.list_dict_dynamics_slr,
-                                           self.list_dict_dynamics_count_vac,
-                                           self.list_dict_dynamics_slr_name,
-                                           self.list_dict_dynamics_count_vac_name))
-        pool.map_async(self.stat, splitted_file_names)
+        pool = Pool(processes=6)
+        for el in pool.map(self.stat, splitted_file_names):
+            self.list_dict_dynamics_slr.append(el[0])
+            self.list_dict_dynamics_count_vac.append(el[1])
+            self.list_dict_dynamics_slr_name.append(el[2])
+            self.list_dict_dynamics_count_vac_name.append(el[3])
         pool.close()
         pool.join()
+
         self.list_dict_dynamics_slr = list(filter(None, self.list_dict_dynamics_slr))
         self.list_dict_dynamics_count_vac = list(filter(None, self.list_dict_dynamics_count_vac))
         self.list_dict_dynamics_slr_name = list(filter(None, self.list_dict_dynamics_slr_name))
@@ -338,10 +340,10 @@ class StatisticsByYear:
 
     def stat(self, file_name):
         dataset = DataSet(file_name, self.name, 2007, 2014)
-        self.list_dict_dynamics_slr.append(self.__dynamics_salary(dataset.vacancies_objects))
-        self.list_dict_dynamics_count_vac.append(self.__dynamics_count_vac(dataset.vacancies_objects))
-        self.list_dict_dynamics_slr_name.append(self.__dynamics_salary(dataset.vacancies_objects_name))
-        self.list_dict_dynamics_count_vac_name.append(self.__dynamics_count_vac(dataset.vacancies_objects_name))
+        return self.__dynamics_salary(dataset.vacancies_objects), \
+               self.__dynamics_count_vac(dataset.vacancies_objects), \
+               self.__dynamics_salary(dataset.vacancies_objects_name), \
+               self.__dynamics_count_vac(dataset.vacancies_objects_name)
 
     def __dynamics_salary(self, data_vacancies: list) -> dict:
         """Составление словаря динамики уровня зарплат по годам для всех вакансий

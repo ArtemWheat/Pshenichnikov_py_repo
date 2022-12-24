@@ -4,4 +4,4 @@
 ![](readme_images/datetime.png)
 ![](readme_images/date_parser.png)
 ![](readme_images/img.png)
-![](readme_images/with_multiprocess.png)
+![](readme_images/multiprocessing.png)
