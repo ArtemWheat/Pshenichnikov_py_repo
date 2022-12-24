@@ -15,6 +15,7 @@ from prettytable import PrettyTable, ALL
 from multiprocessing import Manager, Pool
 import cProfile, pstats, io
 from pstats import SortKey
+from concurrent.futures import ProcessPoolExecutor
 from dateutil import parser
 from datetime import datetime
 
@@ -312,14 +313,12 @@ class StatisticsByYear:
         self.list_dict_dynamics_slr_name = []
         self.list_dict_dynamics_count_vac_name = []
 
-        pool = Pool(processes=6)
+        pool = ProcessPoolExecutor(max_workers=6)
         for el in pool.map(self.stat, splitted_file_names):
             self.list_dict_dynamics_slr.append(el[0])
             self.list_dict_dynamics_count_vac.append(el[1])
             self.list_dict_dynamics_slr_name.append(el[2])
             self.list_dict_dynamics_count_vac_name.append(el[3])
-        pool.close()
-        pool.join()
 
         self.list_dict_dynamics_slr = list(filter(None, self.list_dict_dynamics_slr))
         self.list_dict_dynamics_count_vac = list(filter(None, self.list_dict_dynamics_count_vac))
