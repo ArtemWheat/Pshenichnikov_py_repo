@@ -26,18 +26,24 @@ class InputConnect:
     Attributes:
         file_name (str): Имя файла
         name (str): Искомое имя
-        __dict_formatter (dict): Словарь функций предобработки вакансий для вывода таблицы
+        __dict_formatter_for_full_slr (dict): Словарь функций предобработки вакансий для вывода таблицы
     """
 
     def __init__(self):
         """Инициализация класса InputConnect"""
-        self.file_name = self.__processing_file_name(input('Введите название файла: '))
+        self.file_name = self.__processing_file_name('Resources/' + input('Введите название файла: '))
         self.name = input('Введите название профессии: ')
-        self.__dict_formatter = {
+        self.__dict_formatter_for_full_slr = {
             'Название': lambda row: row.name,
             'Оклад': lambda
                 row: f'{self.__slr_format(row.salary.salary_from)} - {self.__slr_format(row.salary.salary_to)} ' \
                      f'({dict_slr_currency[row.salary.salary_currency]}) ',
+            'Название региона': lambda row: row.area_name,
+            'Дата публикации вакансии': lambda row: '.'.join(reversed(row.published_at[0:10].split('-')))
+        }
+        self.__dict_formatter_for_small_slr = {
+            'Название': lambda row: row.name,
+            'Оклад': lambda row: row.salary.salary_avg,
             'Название региона': lambda row: row.area_name,
             'Дата публикации вакансии': lambda row: '.'.join(reversed(row.published_at[0:10].split('-')))
         }
@@ -63,7 +69,7 @@ class InputConnect:
         """
         return '{:,}'.format(math.floor(float(slr))).replace(',', ' ')
 
-    def table_print(self, data_vacancies: list):
+    def table_print(self, data_vacancies: list, is_full_slr=True):
         """Вывод в консоль таблицы
 
         :param data_vacancies: Список вакансий
@@ -79,13 +85,16 @@ class InputConnect:
         for value in data_vacancies:
             temp_array = [counter]
             for v in all_titles_table[1:]:
-                temp = self.__dict_formatter[v](value)
-                temp_array.append(temp if len(temp) < 100 else temp[:100] + '...')
+                if is_full_slr:
+                    temp = self.__dict_formatter_for_full_slr[v](value)
+                else:
+                    temp = self.__dict_formatter_for_small_slr[v](value)
+                temp_array.append(temp if len(str(temp)) < 100 else str(temp)[:100] + '...')
             table.add_row(temp_array)
             counter += 1
         print(table.get_string(fields=all_titles_table))
 
-    def split(self, delimiter=',', output_path='csv_files_by_year'):
+    def split(self, delimiter=',', output_path='csv_files_by_year'): #TODO переделать в вид без чтения
         with open(self.file_name, encoding='utf-8-sig') as read_file:
             file_reader = csv.reader(read_file, delimiter=delimiter)
             try:

@@ -20,7 +20,7 @@ class Salary:
         salary_currency (str): Валюта
     """
 
-    def __init__(self, salary_from, salary_to, salary_currency: str):
+    def __init__(self, salary_from='', salary_to='', salary_currency='', salary_avg=''):
         """Инициализация класса зарплаты
 
         :param salary_from(int, float, str): Оклад 'от'
@@ -35,11 +35,15 @@ class Salary:
         >>> Salary(10.0, 20.0, 'RUR').salary_currency
         'RUR'
         """
-        self.salary_from = int(float(salary_from))
-        self.salary_to = int(float(salary_to))
-        if salary_currency not in currency_to_rub.keys():
-            raise ValueError('Неверно введна валюта')
-        self.salary_currency = salary_currency
+        if salary_avg == '':
+            self.salary_from = int(float(salary_from))
+            self.salary_to = int(float(salary_to))
+            if salary_currency not in currency_to_rub.keys():
+                raise ValueError('Неверно введна валюта')
+            self.salary_currency = salary_currency
+            self.salary_avg = ''
+        else:
+            self.salary_avg = int(float(salary_avg))
 
     def get_salary_to_rub(self) -> float:
         """Функция подсчета средней ЗП в рублях с помощью словаря currency_to_rub
@@ -55,4 +59,7 @@ class Salary:
         >>> Salary(20, 30.0, 'RUR').get_salary_to_rub()
         25.0
         """
-        return currency_to_rub[self.salary_currency] * (float(self.salary_to) + float(self.salary_from)) / 2
+        if self.salary_avg == '':
+            return currency_to_rub[self.salary_currency] * (float(self.salary_to) + float(self.salary_from)) / 2
+        else:
+            return self.salary_avg

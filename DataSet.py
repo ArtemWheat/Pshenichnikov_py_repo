@@ -1,5 +1,6 @@
 import csv
 import re
+from collections import Counter
 
 from Vacancy import Vacancy
 
@@ -30,12 +31,18 @@ class DataSet:
         self.file_name = file_name
         self.vacancies_objects = []
         self.vacancies_objects_name = []
-        for vacancy in self.__csv_reader():
+        data_vac = self.__csv_reader()
+        for vacancy in data_vac:
             if not start <= int(vacancy['published_at'][:4]) <= end:
                 continue
             self.vacancies_objects.append(Vacancy(vacancy))
             if name in vacancy['name']:
                 self.vacancies_objects_name.append(Vacancy(vacancy))
+
+    def filter_by_currency(self, data_vacancies):
+        freq_curr = {k: v for k, v in dict(Counter(map(lambda x: x.salary.salary_currency, data_vacancies))).items() if
+                     v > 5000}
+        data_vacancies = [x for x in data_vacancies if x.salary.salary_currency in list(freq_curr.keys())]
 
     def __csv_reader(self) -> list:
         """Чтение .csv

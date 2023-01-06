@@ -18,9 +18,12 @@ class Vacancy:
         :param dict_vacancy: Словарь вакансии
         """
         self.name = dict_vacancy['name']
-        self.salary = Salary(salary_from=dict_vacancy['salary_from'],
-                             salary_to=dict_vacancy['salary_to'],
-                             salary_currency=dict_vacancy['salary_currency'])
+        if 'salary' in dict_vacancy.keys():
+            self.salary = Salary(salary_avg=dict_vacancy['salary'])
+        else:
+            self.salary = Salary(salary_from=dict_vacancy['salary_from'],
+                                 salary_to=dict_vacancy['salary_to'],
+                                 salary_currency=dict_vacancy['salary_currency'])
         self.area_name = dict_vacancy['area_name']
         self.published_at = dict_vacancy['published_at']
 
